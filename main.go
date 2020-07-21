@@ -48,20 +48,30 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	showHelp := flag.Bool("h", false, "Show usage")
+	confPath := flag.String("c", "", "Path to config file")
 	writeConf := flag.Bool("writeconf", false, "Creates an empty sample conf file")
+
 	flag.Parse()
-	if *writeConf {
-		err := config.Write()
-		if err != nil{
-                	fmt.Println(err)
-        	}
+
+	if *showHelp {
+		flag.PrintDefaults()
 		return
 	}
-	_, err := config.Read()
+	if *writeConf {
+		err := config.Write()
+		if err != nil {
+			fmt.Println(err)
+		}
+		return
+	}
+	conf, err := config.Read(*confPath)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		return
 	}
 	http.HandleFunc("/", index)
-	fmt.Println("Starting server")
-	log.Fatal(http.ListenAndServe("vpn:8080", nil))
+	listenStr := conf.Listen.Address + ":" + conf.Listen.Port
+	log.Print("Starting server ", listenStr)
+	log.Fatal(http.ListenAndServe(listenStr, nil))
 }

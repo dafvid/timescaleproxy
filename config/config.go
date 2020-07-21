@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 type Configuration struct {
@@ -24,11 +25,16 @@ type Configuration struct {
 	}
 }
 
-func Read() (*Configuration, error) {
+func Read(cpath string) (*Configuration, error) {
 	fpath := os.Getenv("TIMESCALEPROXY_CONFPATH")
 	if fpath == "" {
-		return nil, errors.New("Set env TIMESCALEPROXY_CONFPATH")
+		fpath = cpath
 	}
+
+	if fpath == "" {
+		return nil, errors.New("Set env TIMESCALEPROXY_CONFPATH or use -c flag")
+	}
+	fpath, err := filepath.Abs(fpath)
 	file, err := os.Open(fpath)
 	if err != nil {
 		return nil, err
@@ -46,22 +52,22 @@ func Read() (*Configuration, error) {
 
 func Write() error {
 	fpath, err := os.Getwd()
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	fmt.Println(fpath)
 	fpath = path.Join(fpath, "timescaleproxy.conf.sample")
 	fmt.Println(fpath)
 	file, err := json.MarshalIndent(Configuration{}, "", "\t")
-        if err != nil{
-                return err
-        }
+	if err != nil {
+		return err
+	}
 	fmt.Println(string(file))
 	err = ioutil.WriteFile(fpath, file, 0600)
 	fmt.Println("Created sample file", fpath)
-        if err != nil{
-                return err
-        }
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
