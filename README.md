@@ -7,6 +7,7 @@ I saw the need to try and create a simple workaround by using a simple HTTP-prox
 The plan is to borrow a lot of code from the [plugin](https://github.com/svenklemm/telegraf/tree/postgres/plugins/outputs/postgresql) but instead of making it a general PostgreSQL output it just writes to TimescaleDB.
 
 As of now (2020-07-21) it's just the initial commit of something that recieves JSON and creates a Go map.
+- 22/7  Created a module, read/write config
 
 # TODO
 - config
