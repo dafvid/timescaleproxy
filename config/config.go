@@ -12,13 +12,15 @@ import (
 	"path/filepath"
 )
 
+type DbConfig struct {
+	Host     string
+	Database string
+	User     string
+	Password string
+}
+
 type Configuration struct {
-	Db struct {
-		Host     string
-		Database string
-		User     string
-		Password string
-	}
+	Db     DbConfig
 	Listen struct {
 		Address string
 		Port    string

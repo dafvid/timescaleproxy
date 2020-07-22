@@ -2,14 +2,18 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/dafvid/timescaleproxy/config"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/dafvid/timescaleproxy/config"
+	"github.com/dafvid/timescaleproxy/db"
+	"github.com/dafvid/timescaleproxy/metric"
 )
+
+var p db.Pgdb
 
 func handleMetric(m map[string]interface{}) {
 	fmt.Println()
@@ -29,20 +33,16 @@ func handleMetric(m map[string]interface{}) {
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
-	//body, _ := r.GetBody()
-	fmt.Println("Request incoming!")
 	if r.Body != nil {
 		var b bytes.Buffer
 		var dest io.Writer = &b
 		_, _ = io.Copy(dest, r.Body)
-		//fmt.Println(string(b.Bytes()))
-		var result map[string]interface{}
-		json.Unmarshal(b.Bytes(), &result)
-		_, isBatch := result["metrics"]
-		if isBatch {
-			for _, m := range result["metrics"].([]interface{}) {
-				handleMetric(m.(map[string]interface{}))
-			}
+		metrics, err := metric.Parse(b.Bytes())
+		if err != nil {
+			log.Print(err)
+		}
+		for _, m := range metrics {
+			fmt.Println(m)
 		}
 	}
 }
@@ -70,6 +70,7 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+	p = db.NewPgdb(conf.Db)
 	http.HandleFunc("/", index)
 	listenStr := conf.Listen.Address + ":" + conf.Listen.Port
 	log.Print("Starting server ", listenStr)
