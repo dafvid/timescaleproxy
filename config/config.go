@@ -14,6 +14,7 @@ import (
 
 type DbConfig struct {
 	Host     string
+	Port     uint16
 	Database string
 	User     string
 	Password string
@@ -57,16 +58,13 @@ func Write() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(fpath)
 	fpath = path.Join(fpath, "timescaleproxy.conf.sample")
-	fmt.Println(fpath)
 	file, err := json.MarshalIndent(Configuration{}, "", "\t")
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(file))
 	err = ioutil.WriteFile(fpath, file, 0600)
-	fmt.Println("Created sample file", fpath)
+	log.Print("Created sample file", fpath)
 	if err != nil {
 		return err
 	}

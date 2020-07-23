@@ -2,38 +2,36 @@ package metric
 
 import (
 	"encoding/json"
-	"fmt"
+	//"fmt"
 )
 
 type Metric struct {
-	name      string
-	tags      map[string]string
-	fields    map[string]interface{}
-	timestamp int
+	Name      string
+	Tags      map[string]string
+	Fields    map[string]interface{}
+	Timestamp int
 }
 
 type Metrics struct {
-	metrics []Metric
+	Metrics []Metric
 }
 
 func Parse(data []byte) ([]Metric, error) {
-	fmt.Println(string(data))
 	// peek into first bytes of data
 	isBatch := string(data[2:9]) == "metrics"
 	if isBatch {
-		fmt.Println("It's a batch!")
-		var result Metrics
-		err := json.Unmarshal(data, &result)
+		var metrics Metrics
+		err := json.Unmarshal(data, &metrics)
 		if err != nil {
 			return []Metric{}, err
 		}
-		return result.metrics, nil
+		return metrics.Metrics, nil
 	} else {
-		var result Metric
-		err := json.Unmarshal(data, &result)
+		var metric Metric
+		err := json.Unmarshal(data, &metric)
 		if err != nil {
 			return []Metric{}, err
 		}
-		return []Metric{result}, nil
+		return []Metric{metric}, nil
 	}
 }

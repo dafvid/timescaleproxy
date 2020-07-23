@@ -8,9 +8,12 @@ The plan is to borrow a lot of code from the [plugin](https://github.com/svenkle
 
 As of now (2020-07-21) it's just the initial commit of something that recieves JSON and creates a Go map.
 - 22/7  Created a module, read/write config
+- 23/7  Parse JSON into []Metric
 
 # TODO
-- config
+- ~~config~~
 - create tables from first measurement
 - update table if measurement changes
 - write measurement to db
+- tags as FK
+- schema config

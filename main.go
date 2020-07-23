@@ -15,24 +15,8 @@ import (
 
 var p db.Pgdb
 
-func handleMetric(m map[string]interface{}) {
-	fmt.Println()
-	fmt.Println("METRIC")
-	fmt.Println("  name =", m["name"])
-	fmt.Println("  ts =", int(m["timestamp"].(float64)))
-	fmt.Println("FIELDS")
-	for k, v := range m["fields"].(map[string]interface{}) {
-		fmt.Println(" ", k, "=", v)
-	}
-
-	fmt.Println("TAGS")
-	for k, v := range m["tags"].(map[string]interface{}) {
-		fmt.Println(" ", k, "=", v)
-	}
-
-}
-
 func index(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("index()")
 	if r.Body != nil {
 		var b bytes.Buffer
 		var dest io.Writer = &b
@@ -42,7 +26,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 		}
 		for _, m := range metrics {
-			fmt.Println(m)
+			p.Write(m)
 		}
 	}
 }
