@@ -1,25 +1,21 @@
 package db
 
 import (
-	"fmt"
 	"log"
-	"reflect"
 	"sync"
 
 	"github.com/jackc/pgx"
 
 	"github.com/dafvid/timescaleproxy/config"
 	"github.com/dafvid/timescaleproxy/metric"
-	"github.com/dafvid/timescaleproxy/util"
 )
 
 type Pgdb struct {
-	connconf pgx.ConnConfig
-	c        *pgx.Conn
-	connlock sync.Mutex
+	connconf    pgx.ConnConfig
+	c           *pgx.Conn
+	connlock    sync.Mutex
+	knownTables map[string]Table
 }
-
-var tableChecked []string
 
 func NewPgdb(conf config.DbConfig) Pgdb {
 	p := Pgdb{}
@@ -31,6 +27,7 @@ func NewPgdb(conf config.DbConfig) Pgdb {
 	connconf.Password = conf.Password
 
 	p.connconf = connconf
+	p.knownTables = make(map[string]Table)
 	return p
 }
 
@@ -50,32 +47,21 @@ func (p *Pgdb) checkConn() error {
 	return nil
 }
 
-func printMetric(m metric.Metric) {
-	fmt.Println()
-	fmt.Println("METRIC")
-	fmt.Println("  name =", m.Name)
-	fmt.Println("  ts =", int(m.Timestamp))
-	fmt.Println("FIELDS")
-	for k, v := range m.Fields {
-		fmt.Println(" ", k, "=", v, reflect.TypeOf(v))
-	}
-
-	fmt.Println("TAGS")
-	for k, v := range m.Tags {
-		fmt.Println(" ", k, "=", v)
-	}
-
-}
-
-func (p Pgdb) checkTable(m metric.Metric) {
+func (p *Pgdb) checkTable(m metric.Metric) {
 	//fmt.Println("db.checkTable")
 	name := m.Name
 	//fmt.Println("Name", name)
-	if !util.InArr(name, tableChecked) {
-		// table exists
-		// else create table
-		printMetric(m)
-		tableChecked = append(tableChecked, name)
+	_, ok := p.knownTables[name]
+	if !ok {
+		m.Print()
+		var t Table
+		if p.Exists(name) {
+			t = p.ReflectTable(name)
+		} else {
+			t = p.CreateTable(m)
+		}
+
+		p.knownTables[name] = t
 	}
 }
 

@@ -16,7 +16,7 @@ import (
 var p db.Pgdb
 
 func index(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("index()")
+	//fmt.Println("index()")
 	if r.Body != nil {
 		var b bytes.Buffer
 		var dest io.Writer = &b

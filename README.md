@@ -19,3 +19,5 @@ As of now (2020-07-21) it's just the initial commit of something that recieves J
 - tags as FK
 - schema config
 - handle influx line protocol
+- measurement config
+- sanitize strings
