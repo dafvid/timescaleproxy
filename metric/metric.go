@@ -13,7 +13,7 @@ type Metric struct {
 	Name      string
 	Tags      Tags
 	Fields    Fields
-	Timestamp int
+	Timestamp int64
 }
 
 type Metrics struct {

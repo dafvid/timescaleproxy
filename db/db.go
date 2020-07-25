@@ -15,6 +15,7 @@ type Pgdb struct {
 	c           *pgx.Conn
 	connlock    sync.Mutex
 	knownTables map[string]Table
+	schema      string
 }
 
 func NewPgdb(conf config.DbConfig) Pgdb {
@@ -28,6 +29,7 @@ func NewPgdb(conf config.DbConfig) Pgdb {
 
 	p.connconf = connconf
 	p.knownTables = make(map[string]Table)
+	p.schema = conf.Schema
 	return p
 }
 
@@ -47,22 +49,23 @@ func (p *Pgdb) checkConn() error {
 	return nil
 }
 
-func (p *Pgdb) checkTable(m metric.Metric) {
+func (p *Pgdb) checkTable(m metric.Metric) *Table {
 	//fmt.Println("db.checkTable")
 	name := m.Name
 	//fmt.Println("Name", name)
-	_, ok := p.knownTables[name]
+	t, ok := p.knownTables[name]
 	if !ok {
-		m.Print()
-		var t Table
-		if p.Exists(name) {
-			t = p.ReflectTable(name)
+		//m.Print()
+		if p.exists(name) {
+			t = *p.reflectTable(name)
 		} else {
-			t = p.CreateTable(m)
+			t = *p.createTable(m)
 		}
 
 		p.knownTables[name] = t
 	}
+
+	return &t
 }
 
 func (p Pgdb) Close() error {
@@ -75,5 +78,10 @@ func (p Pgdb) Close() error {
 func (p *Pgdb) Write(m metric.Metric) {
 	//fmt.Println("db.Write()")
 	p.checkConn()
-	p.checkTable(m)
+	t := p.checkTable(m)
+	if t == nil {
+		log.Print("No table for metric '%v'", m.Name)
+	} else {
+		p.write(m)
+	}
 }

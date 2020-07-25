@@ -28,6 +28,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 		for _, m := range metrics {
 			p.Write(m)
 		}
+		//log.Printf("Wrote %v metrics to DB", len(metrics))
 	}
 }
 

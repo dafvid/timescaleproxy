@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	//"github.com/jackc/pgx"
 
@@ -21,6 +22,10 @@ type Table struct {
 	Columns []Column
 }
 
+func (t Table) fullName() string {
+	return t.Schema + "." + t.Name
+}
+
 func getDataType(v interface{}) string {
 	switch v.(type) {
 	case bool:
@@ -35,10 +40,10 @@ func getDataType(v interface{}) string {
 	}
 }
 
-func makeTable(m metric.Metric) Table {
+func (p Pgdb) makeTable(m metric.Metric) Table {
 	t := Table{
 		Name:   m.Name,
-		Schema: "public",
+		Schema: p.schema,
 		Columns: []Column{
 			{Name: "time", Type: "timestamp"},
 		},
@@ -60,7 +65,7 @@ func (t *Table) makeColumns(m metric.Metric) []Column {
 	return result
 }
 
-func (t Table) ColumnDef() string {
+func (t Table) columnDef() string {
 	coldefs := make([]string, len(t.Columns))
 	for i, c := range t.Columns {
 		coldefs[i] = c.Name + " " + c.Type
@@ -68,33 +73,83 @@ func (t Table) ColumnDef() string {
 	return strings.Join(coldefs, ", ")
 }
 
-func (p *Pgdb) CreateTable(m metric.Metric) Table {
-	t := makeTable(m)
-	qf := "CREATE TABLE IF NOT EXISTS %v(%v); SELECT create_hypertable('%v','time',chunk_time_interval := '1 week'::interval,if_not_exists := true);"
-	q := fmt.Sprintf(qf, t.Name, t.ColumnDef(), t.Schema+"."+t.Name)
+func (p *Pgdb) createTable(m metric.Metric) *Table {
+
+	t := p.makeTable(m)
+	qt := "CREATE TABLE IF NOT EXISTS %v(%v); SELECT create_hypertable('%v','time',chunk_time_interval := '1 week'::interval,if_not_exists := true);"
+	q := fmt.Sprintf(qt, t.Name, t.columnDef(), t.Schema+"."+t.Name)
 	fmt.Println(q)
-	/*ct, err := p.c.Exec(q)
-	  if err != nil {
-	      log.Print(err)
-	  }*/
-	return t
+	_, err := p.c.Exec(q)
+	if err != nil {
+		log.Print(err)
+		return nil
+	}
+	log.Printf("Created table for metric '%v'", m.Name)
+	return &t
 }
 
-func (p *Pgdb) ReflectTable(name string) Table {
-	t := Table{}
-	return t
+func (p *Pgdb) reflectTable(name string) *Table {
+	qt := "SELECT column_name, udt_name FROM information_schema.columns WHERE table_schema = '%v' and table_name = '%v'"
+	q := fmt.Sprintf(qt, p.schema, name)
+	rows, err := p.c.Query(q)
+	if err != nil {
+		log.Printf("Can't reflect table '%v' (%v)", name, err)
+		return nil
+	}
+	defer rows.Close()
+	t := Table{
+		Name:    name,
+		Schema:  p.schema,
+		Columns: []Column{},
+	}
+	var cname, ctype string
+	for rows.Next() {
+		err := rows.Scan(&cname, &ctype)
+		if err != nil {
+			log.Printf("No columns for table '%v''", name)
+			return nil
+		}
+		t.Columns = append(t.Columns, Column{
+			Name: cname,
+			Type: ctype,
+		})
+	}
+	return &t
 }
 
-func (p *Pgdb) Exists(name string) bool {
-	ct, err := p.c.Exec("SELECT tablename FROM pg_tables WHERE tablename = $1 AND schemaname = 'public'", name)
+func (p *Pgdb) exists(name string) bool {
+	rows, err := p.c.Query("SELECT 1 FROM pg_tables WHERE tablename = $1 AND schemaname = $2", name, p.schema)
 	if err != nil {
 		log.Print(err)
 		return false
 	}
-
-	if ct.RowsAffected() == 1 {
+	defer rows.Close()
+	for rows.Next() {
 		return true
 	}
 
-	return false
+	return true
+}
+
+func (p Pgdb) write(m metric.Metric) {
+	t := p.knownTables[m.Name]
+	l := len(t.Columns)
+	names := make([]string, l)
+	vf := make([]string, l)
+	values := make([]interface{}, l)
+	for i, c := range t.Columns {
+		names[i] = c.Name
+		if c.Name == "time" {
+			t := time.Unix(m.Timestamp, 0).UTC()
+			values[i] = t
+		} else {
+			values[i] = m.Fields[c.Name]
+		}
+		vf[i] = fmt.Sprintf("$%v", i+1)
+	}
+	q := fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v)", t.fullName(), strings.Join(names, ", "), strings.Join(vf, ", "))
+	_, err := p.c.Exec(q, values...)
+	if err != nil {
+		log.Print(err)
+	}
 }

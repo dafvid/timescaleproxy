@@ -18,6 +18,7 @@ type DbConfig struct {
 	Database string
 	User     string
 	Password string
+	Schema   string
 }
 
 type Configuration struct {
@@ -26,6 +27,7 @@ type Configuration struct {
 		Address string
 		Port    string
 	}
+	TimestampUnit string
 }
 
 func Read(cpath string) (*Configuration, error) {
@@ -59,7 +61,7 @@ func Write() error {
 		return err
 	}
 	fpath = path.Join(fpath, "timescaleproxy.conf.sample")
-	file, err := json.MarshalIndent(Configuration{}, "", "\t")
+	file, err := json.MarshalIndent(Configuration{Db: DbConfig{Schema: "public"}}, "", "\t")
 	if err != nil {
 		return err
 	}
