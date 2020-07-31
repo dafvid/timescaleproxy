@@ -27,7 +27,8 @@ type Configuration struct {
 		Address string
 		Port    string
 	}
-	TimestampUnit string
+	TimestampUnit     string
+	DefaultDropPolicy string
 }
 
 func Read(cpath string) (*Configuration, error) {

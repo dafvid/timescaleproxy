@@ -16,7 +16,7 @@ import (
 var p db.Pgdb
 
 func index(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("index()")
+	//fmt.Println("\nindex()")
 	if r.Body != nil {
 		var b bytes.Buffer
 		var dest io.Writer = &b
@@ -25,10 +25,16 @@ func index(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Print(err)
 		}
-		for _, m := range metrics {
-			p.Write(m)
+
+		if p.CheckConn() {
+			for _, m := range metrics {
+				p.Write(m)
+			}
+			//log.Printf("Wrote %v metrics to DB", len(metrics))
+		} else {
+			log.Print("Can't connect to backend")
+			http.Error(w, "Can't connect to backend", 503)
 		}
-		//log.Printf("Wrote %v metrics to DB", len(metrics))
 	}
 }
 
