@@ -1,15 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"io"
-	"log"
+	l "log"
 	"net/http"
 
 	"github.com/dafvid/timescaleproxy/config"
 	"github.com/dafvid/timescaleproxy/db"
+	"github.com/dafvid/timescaleproxy/log"
 	"github.com/dafvid/timescaleproxy/metric"
 )
 
@@ -18,12 +17,10 @@ var p db.Pgdb
 func index(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("\nindex()")
 	if r.Body != nil {
-		var b bytes.Buffer
-		var dest io.Writer = &b
-		_, _ = io.Copy(dest, r.Body)
-		metrics, err := metric.Parse(b.Bytes())
+		metrics, err := metric.Parse(r.Body)
 		if err != nil {
-			log.Print(err)
+			log.Info("Can't parse JSON ", err)
+			http.Error(w, "Can't parse JSON", 400)
 		}
 
 		if p.CheckConn() {
@@ -32,13 +29,15 @@ func index(w http.ResponseWriter, r *http.Request) {
 			}
 			//log.Printf("Wrote %v metrics to DB", len(metrics))
 		} else {
-			log.Print("Can't connect to backend")
+			log.Info("Can't connect to backend")
 			http.Error(w, "Can't connect to backend", 503)
 		}
 	}
 }
 
 func main() {
+	log.Loglevel = log.DebugLevel
+
 	showHelp := flag.Bool("h", false, "Show usage")
 	confPath := flag.String("c", "", "Path to config file")
 	writeConf := flag.Bool("writeconf", false, "Creates an empty sample conf file")
@@ -64,6 +63,6 @@ func main() {
 	p = db.NewPgdb(conf.Db)
 	http.HandleFunc("/", index)
 	listenStr := conf.Listen.Address + ":" + conf.Listen.Port
-	log.Print("Starting server ", listenStr)
-	log.Fatal(http.ListenAndServe(listenStr, nil))
+	log.Info(fmt.Sprint("Starting server ", listenStr))
+	l.Fatal(http.ListenAndServe(listenStr, nil))
 }

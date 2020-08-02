@@ -209,7 +209,8 @@ func (p Pgdb) write(m metric.Metric) {
 	t := p.knownTables[m.Name]
 	tagId := p.writeTags(m, t.TagsTable)
 	if tagId == 0 {
-		log.Print("Can't find tag id for ", m.Name)
+		//log.Print("Can't find tag id for ", m.Name)
+		//m.Print()
 		return
 	}
 	p.writeData(m, t.DataTable, tagId)

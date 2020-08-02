@@ -72,7 +72,7 @@ func (p Pgdb) writeTags(m metric.Metric, t Table) int {
 	if err == nil {
 		return tagId
 	}
-	fmt.Println("db.tags.writeTags() ", err)
+	//fmt.Println("db.tags.writeTags() ", err)
 
 	q = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v) RETURNING id", t.fullName(), strings.Join(names, ", "), strings.Join(vf, ", "))
 	row = p.c.QueryRow(q, values...)
@@ -80,6 +80,6 @@ func (p Pgdb) writeTags(m metric.Metric, t Table) int {
 	if err == nil {
 		return tagId
 	}
-	log.Print("Error in db.tags.writeTags() ", err)
+	//log.Print("Error in db.tags.writeTags() ", err)
 	return 0
 }

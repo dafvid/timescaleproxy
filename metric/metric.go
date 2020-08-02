@@ -1,9 +1,12 @@
 package metric
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
+	//"github.com/dafvid/timescaleproxy/log"
 )
 
 type Tags map[string]string
@@ -20,24 +23,32 @@ type Metrics struct {
 	Metrics []Metric
 }
 
-func Parse(data []byte) ([]Metric, error) {
-	// peek into first bytes of data
-	isBatch := string(data[2:9]) == "metrics"
+func (m Metric) MissingValues() bool {
+	return m.Name == "" || len(m.Fields) == 0
+}
+
+func Parse(data io.Reader) ([]Metric, error) {
+	peekReader := bufio.NewReader(data)
+	peek, _ := peekReader.Peek(9) // peek first 9 bytes of content
+	isBatch := string(peek[2:]) == "metrics"
+	decoder := json.NewDecoder(peekReader)
+
 	if isBatch {
 		var metrics Metrics
-		err := json.Unmarshal(data, &metrics)
+		err := decoder.Decode(&metrics)
 		if err != nil {
 			return []Metric{}, err
 		}
 		return metrics.Metrics, nil
 	} else {
 		var metric Metric
-		err := json.Unmarshal(data, &metric)
+		err := decoder.Decode(&metric)
 		if err != nil {
 			return []Metric{}, err
 		}
 		return []Metric{metric}, nil
 	}
+
 }
 
 func (m Metric) Print() {

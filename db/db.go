@@ -30,7 +30,6 @@ func NewPgdb(conf config.DbConfig) Pgdb {
 	p.connconf = connconf
 	p.knownTables = make(map[string]Tables)
 	p.schema = conf.Schema
-	p.c = p.connect()
 	return p
 }
 
@@ -49,12 +48,11 @@ func (p *Pgdb) IsAlive() bool {
 }
 
 func (p *Pgdb) connect() *pgx.Conn {
-	log.Printf("Connecting to DB (%v:%v)...", p.connconf.Host, p.connconf.Port)
+	log.Printf("Connecting to Postgresql (%v:%v)", p.connconf.Host, p.connconf.Port)
 	c, err := pgx.Connect(p.connconf)
 	if err != nil {
 		log.Print("db.connect() ", err)
 	}
-	log.Print("...done! ")
 	return c
 }
 
