@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -73,7 +74,7 @@ func (t *Table) makeColumns(m metric.Metric) []Column {
 	return result
 }
 
-// Create columns SQL from Table.Columns
+// Create SQL from Table.Columns
 func (t Table) columnDefs() string {
 	coldefs := make([]string, len(t.Columns))
 	for i, c := range t.Columns {
@@ -82,11 +83,11 @@ func (t Table) columnDefs() string {
 	return strings.Join(coldefs, ", ")
 }
 
-func (p *Pgdb) createDataTable(m metric.Metric) *Table {
+func (p *Pgdb) createDataTable(ctx context.Context, m metric.Metric) *Table {
 	t := p.makeDataTable(m)
 	qt := "CREATE TABLE IF NOT EXISTS %v(%v); SELECT create_hypertable('%v','time',chunk_time_interval := '1 week'::interval,if_not_exists := true);"
 	q := fmt.Sprintf(qt, t.Name, t.columnDefs(), t.Schema+"."+t.Name)
-	_, err := p.c.Exec(q)
+	_, err := p.c.Exec(ctx, q)
 	if err != nil {
 		log.Print("Error in db.sql.createTable() ", q, err)
 		return nil
@@ -95,13 +96,13 @@ func (p *Pgdb) createDataTable(m metric.Metric) *Table {
 	return &t
 }
 
-func (p *Pgdb) createTables(m metric.Metric) *Tables {
+func (p *Pgdb) createTables(ctx context.Context, m metric.Metric) *Tables {
 	//log.Printf("db.sql.createTables(%v)", m.Name)
-	tt := p.createTagsTable(m)
+	tt := p.createTagsTable(ctx, m)
 	if tt == nil {
 		return nil
 	}
-	t := p.createDataTable(m)
+	t := p.createDataTable(ctx, m)
 	if t == nil {
 		return nil
 	}
@@ -112,13 +113,13 @@ func (p *Pgdb) createTables(m metric.Metric) *Tables {
 	}
 }
 
-func (p *Pgdb) reflectTable(name string) *Table {
+func (p *Pgdb) reflectTable(ctx context.Context, name string) *Table {
 	qt := "SELECT column_name, udt_name FROM information_schema.columns WHERE table_schema = '%v' and table_name = '%v'"
 	q := fmt.Sprintf(qt, p.schema, name)
-	rows, err := p.c.Query(q)
+	rows, err := p.c.Query(ctx, q)
 	defer rows.Close()
 	if err != nil {
-		log.Printf("Can't reflect table '%v' (%v)", name, err)
+		log.Printf("Error in db.sql.reflectTable(): %v (%v)", q, err)
 		return nil
 	}
 
@@ -131,7 +132,7 @@ func (p *Pgdb) reflectTable(name string) *Table {
 	for rows.Next() {
 		err := rows.Scan(&cname, &ctype)
 		if err != nil {
-			log.Printf("No columns for table '%v''", name)
+			log.Printf("Error in db.sql.reflectTable(): No columns for table '%v''", name)
 			return nil
 		}
 		t.Columns = append(t.Columns, Column{
@@ -142,13 +143,13 @@ func (p *Pgdb) reflectTable(name string) *Table {
 	return &t
 }
 
-func (p *Pgdb) reflectTables(name string) *Tables {
+func (p *Pgdb) reflectTables(ctx context.Context, name string) *Tables {
 	//log.Printf("db.sql.reflectTables(%v)", name)
-	tt := p.reflectTable(name + "_tags")
+	tt := p.reflectTable(ctx, name+"_tags")
 	if tt == nil {
 		return nil
 	}
-	dt := p.reflectTable(name)
+	dt := p.reflectTable(ctx, name)
 	if dt == nil {
 		return nil
 	}
@@ -159,14 +160,14 @@ func (p *Pgdb) reflectTables(name string) *Tables {
 	}
 }
 
-func (p *Pgdb) tableExists(name string) bool {
+func (p *Pgdb) tableExists(ctx context.Context, name string) bool {
 	//log.Printf("db.sql.exists(%v)", name)
 	qt := "SELECT 1 FROM pg_tables WHERE tablename = '%v' AND schemaname = '%v'"
 	q := fmt.Sprintf(qt, name, p.schema)
-	rows, err := p.c.Query(q)
+	rows, err := p.c.Query(ctx, q)
 	defer rows.Close()
 	if err != nil {
-		log.Print("Error in db.exists() ", q, err)
+		log.Print("Error in db.tableExists() ", q, err)
 		return false
 	}
 
@@ -177,11 +178,11 @@ func (p *Pgdb) tableExists(name string) bool {
 	return false
 }
 
-func (p *Pgdb) exists(name string) bool {
-	return p.tableExists(name) && p.tableExists(name+"_tags")
+func (p *Pgdb) exists(ctx context.Context, name string) bool {
+	return p.tableExists(ctx, name) && p.tableExists(ctx, name+"_tags")
 }
 
-func (p Pgdb) writeData(m metric.Metric, t Table, tagId int) {
+func (p Pgdb) writeData(ctx context.Context, m metric.Metric, t Table, tagId int) bool {
 	l := len(t.Columns)
 	names := make([]string, l)
 	vf := make([]string, l)
@@ -199,19 +200,21 @@ func (p Pgdb) writeData(m metric.Metric, t Table, tagId int) {
 		vf[i] = fmt.Sprintf("$%v", i+1)
 	}
 	q := fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v)", t.fullName(), strings.Join(names, ", "), strings.Join(vf, ", "))
-	_, err := p.c.Exec(q, values...)
+	_, err := p.c.Exec(ctx, q, values...)
 	if err != nil {
 		log.Print("Error in db.writeData()", q, err)
+		return false
 	}
+	return true
 }
 
-func (p Pgdb) write(m metric.Metric) {
+func (p Pgdb) write(ctx context.Context, m metric.Metric) bool {
 	t := p.knownTables[m.Name]
-	tagId := p.writeTags(m, t.TagsTable)
+	tagId := p.writeTags(ctx, m, t.TagsTable)
 	if tagId == 0 {
 		//log.Print("Can't find tag id for ", m.Name)
 		//m.Print()
-		return
+		return false
 	}
-	p.writeData(m, t.DataTable, tagId)
+	return p.writeData(ctx, m, t.DataTable, tagId)
 }

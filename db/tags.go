@@ -1,6 +1,8 @@
 package db
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -8,11 +10,11 @@ import (
 	"github.com/dafvid/timescaleproxy/metric"
 )
 
-func (p *Pgdb) createTagsTable(m metric.Metric) *Table {
+func (p *Pgdb) createTagsTable(ctx context.Context, m metric.Metric) *Table {
 	t := p.makeTagTable(m)
 	qt := "CREATE TABLE IF NOT EXISTS %v(%v)"
 	q := fmt.Sprintf(qt, t.Name, t.columnDefs())
-	_, err := p.c.Exec(q)
+	_, err := p.c.Exec(ctx, q)
 	if err != nil {
 		log.Print("Error in db.tags.createTagsTable() ", q, err)
 		return nil
@@ -34,6 +36,7 @@ func (p Pgdb) makeTagTable(m metric.Metric) Table {
 	return t
 }
 
+// Create Table.Columns from Metric.Tags
 func (t *Table) makeTagColumns(m metric.Metric) []Column {
 	result := make([]Column, len(m.Tags))
 	for k := range m.Tags {
@@ -48,7 +51,7 @@ func (t *Table) makeTagColumns(m metric.Metric) []Column {
 	return result
 }
 
-func (p Pgdb) writeTags(m metric.Metric, t Table) int {
+func (p Pgdb) writeTags(ctx context.Context, m metric.Metric, t Table) int {
 	l := len(t.Columns) - 1
 	vf := make([]string, l)
 	wf := make([]string, l)
@@ -65,21 +68,26 @@ func (p Pgdb) writeTags(m metric.Metric, t Table) int {
 		vf[i] = fmt.Sprintf("$%v", i+1)
 		i++
 	}
+	// See if the tag combination already exist
 	q := fmt.Sprintf("SELECT id FROM %v WHERE %v", t.fullName(), strings.Join(wf, " AND "))
 	var tagId int
-	row := p.c.QueryRow(q, values...)
+	row := p.c.QueryRow(ctx, q, values...)
 	err := row.Scan(&tagId)
 	if err == nil {
 		return tagId
+	} else if err != sql.ErrNoRows {
+		// Print errors besides ErrNoRows
+		log.Print("db.tags.writeTags(): %v (%v)", q, err)
+		return 0
 	}
-	//fmt.Println("db.tags.writeTags() ", err)
 
+	// Otherwise create it
 	q = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v) RETURNING id", t.fullName(), strings.Join(names, ", "), strings.Join(vf, ", "))
-	row = p.c.QueryRow(q, values...)
+	row = p.c.QueryRow(ctx, q, values...)
 	err = row.Scan(&tagId)
 	if err == nil {
 		return tagId
 	}
-	//log.Print("Error in db.tags.writeTags() ", err)
+	log.Print("Error in db.tags.writeTags() ", err)
 	return 0
 }

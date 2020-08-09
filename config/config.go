@@ -19,6 +19,8 @@ type DbConfig struct {
 	User     string
 	Password string
 	Schema   string
+	MaxConns int32
+	MinConns int32
 }
 
 type Configuration struct {

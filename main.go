@@ -5,6 +5,7 @@ import (
 	"fmt"
 	l "log"
 	"net/http"
+	"time"
 
 	"github.com/dafvid/timescaleproxy/config"
 	"github.com/dafvid/timescaleproxy/db"
@@ -15,23 +16,21 @@ import (
 var p db.Pgdb
 
 func index(w http.ResponseWriter, r *http.Request) {
+	t := time.Now()
 	//fmt.Println("\nindex()")
 	if r.Body != nil {
 		metrics, err := metric.Parse(r.Body)
 		if err != nil {
-			log.Info("Can't parse JSON ", err)
+			log.Info("main.index(): Can't parse JSON ", err)
 			http.Error(w, "Can't parse JSON", 400)
 		}
 
-		if p.CheckConn() {
-			for _, m := range metrics {
-				p.Write(m)
+		for _, m := range metrics {
+			if !p.Write(r.Context(), m) {
+				http.Error(w, fmt.Sprintf("Can't write metrics '%v'", m.Name), 503)
 			}
-			//log.Printf("Wrote %v metrics to DB", len(metrics))
-		} else {
-			log.Info("Can't connect to backend")
-			http.Error(w, "Can't connect to backend", 503)
 		}
+		log.Debug(fmt.Sprintf("Wrote %3d metrics to DB in %5.3f s", len(metrics), time.Since(t).Seconds()))
 	}
 }
 
@@ -60,7 +59,11 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	p = db.NewPgdb(conf.Db)
+	tp := db.NewPgdb(conf.Db)
+	if tp == nil {
+		l.Fatal("Cannot connect to database")
+	}
+	p = *tp
 	http.HandleFunc("/", index)
 	listenStr := conf.Listen.Address + ":" + conf.Listen.Port
 	log.Info(fmt.Sprint("Starting server ", listenStr))

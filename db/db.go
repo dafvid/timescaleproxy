@@ -1,75 +1,56 @@
 package db
 
 import (
-	"log"
-	"sync"
+	"context"
+	"fmt"
+	l "log"
 
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/dafvid/timescaleproxy/config"
+	"github.com/dafvid/timescaleproxy/log"
 	"github.com/dafvid/timescaleproxy/metric"
 )
 
 type Pgdb struct {
-	connconf    pgx.ConnConfig
-	c           *pgx.Conn
-	connlock    sync.Mutex
+	c           *pgxpool.Pool
 	knownTables map[string]Tables
 	schema      string
 }
 
-func NewPgdb(conf config.DbConfig) Pgdb {
+func NewPgdb(conf config.DbConfig) *Pgdb {
 	p := Pgdb{}
-	connconf := pgx.ConnConfig{}
-	connconf.Host = conf.Host
-	connconf.Port = conf.Port
-	connconf.Database = conf.Database
-	connconf.User = conf.User
-	connconf.Password = conf.Password
 
-	p.connconf = connconf
-	p.knownTables = make(map[string]Tables)
-	p.schema = conf.Schema
-	return p
-}
-
-func (p *Pgdb) IsAlive() bool {
-	if !p.c.IsAlive() {
-		return false
-	}
-	row := p.c.QueryRow("SELECT 1")
-	var i int
-	err := row.Scan(&i)
+	poolconf, err := pgxpool.ParseConfig("")
 	if err != nil {
-		log.Print("Connection wasn't alive really...")
-		return false
+		l.Fatal("Cannot parse config", err)
 	}
-	return true
-}
+	poolconf.MinConns = conf.MinConns
+	poolconf.MaxConns = conf.MaxConns
+	poolconf.ConnConfig.Host = conf.Host
+	if conf.Port == 0 {
+		conf.Port = 5432
+	}
+	poolconf.ConnConfig.Port = conf.Port
+	poolconf.ConnConfig.Database = conf.Database
+	poolconf.ConnConfig.User = conf.User
+	poolconf.ConnConfig.Password = conf.Password
 
-func (p *Pgdb) connect() *pgx.Conn {
-	log.Printf("Connecting to Postgresql (%v:%v)", p.connconf.Host, p.connconf.Port)
-	c, err := pgx.Connect(p.connconf)
+	log.Print(*poolconf)
+
+	log.Info(fmt.Sprintf("Connecting to Postgresql (%v:%v)", conf.Host, conf.Port))
+	c, err := pgxpool.ConnectConfig(context.Background(), poolconf)
 	if err != nil {
 		log.Print("db.connect() ", err)
+		return nil
 	}
-	return c
+	p.c = c
+	p.knownTables = make(map[string]Tables)
+	p.schema = conf.Schema
+	return &p
 }
 
-func (p *Pgdb) CheckConn() bool {
-	//fmt.Println("db.checkConn()")
-	p.connlock.Lock()
-	defer p.connlock.Unlock()
-	if p.c == nil {
-		p.c = p.connect()
-	} else if !p.IsAlive() {
-		p.c.Close()
-		p.c = p.connect()
-	}
-	return p.c != nil
-}
-
-func (p *Pgdb) checkTables(m metric.Metric) bool {
+func (p *Pgdb) checkTables(ctx context.Context, m metric.Metric) bool {
 	//fmt.Println("db.checkTable")
 	name := m.Name
 	//fmt.Println("Name", name)
@@ -78,10 +59,10 @@ func (p *Pgdb) checkTables(m metric.Metric) bool {
 		//m.Print()
 		var t *Tables
 
-		if p.exists(name) {
-			t = p.reflectTables(name)
+		if p.exists(ctx, name) {
+			t = p.reflectTables(ctx, name)
 		} else {
-			t = p.createTables(m)
+			t = p.createTables(ctx, m)
 		}
 
 		if t == nil {
@@ -94,12 +75,13 @@ func (p *Pgdb) checkTables(m metric.Metric) bool {
 	return true
 }
 
-func (p *Pgdb) Write(m metric.Metric) {
+func (p *Pgdb) Write(ctx context.Context, m metric.Metric) bool {
 	//fmt.Println("db.Write()")
-	ok := p.checkTables(m)
+	ok := p.checkTables(ctx, m)
 	if !ok {
-		log.Printf("No table for metric '%v'", m.Name)
+		//log.Printf("Can't create table for metric '%v'", m.Name)
+		return false
 	} else {
-		p.write(m)
+		return p.write(ctx, m)
 	}
 }

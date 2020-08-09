@@ -16,12 +16,12 @@ func Print(v ...interface{}) {
 
 func Info(v ...interface{}) {
 	if Loglevel >= InfoLevel {
-		l.Print("INFO: ", v...)
+		l.Print("INFO: ", v)
 	}
 }
 
 func Debug(v ...interface{}) {
 	if Loglevel >= DebugLevel {
-		l.Print("DEBUG: ", v...)
+		l.Print("DEBUG: ", v)
 	}
 }
