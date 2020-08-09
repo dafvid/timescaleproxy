@@ -4,11 +4,9 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
-	"io/ioutil"
-	"log"
+	"fmt"
+	l "log"
 	"os"
-	"path"
 	"path/filepath"
 )
 
@@ -31,48 +29,41 @@ type Configuration struct {
 	}
 	TimestampUnit     string
 	DefaultDropPolicy string
+	LogLevel          string
 }
 
-func Read(cpath string) (*Configuration, error) {
+func Read(cpath string) Configuration {
 	fpath := os.Getenv("TIMESCALEPROXY_CONFPATH")
 	if fpath == "" {
 		fpath = cpath
 	}
 
 	if fpath == "" {
-		return nil, errors.New("Set env TIMESCALEPROXY_CONFPATH or use -c flag")
+		l.Fatal("Set env TIMESCALEPROXY_CONFPATH or use -c flag")
 	}
 	fpath, err := filepath.Abs(fpath)
+	if err != nil {
+		l.Fatal(fmt.Sprintf("Config file path error '%v' (%v)", fpath, err))
+	}
 	file, err := os.Open(fpath)
 	if err != nil {
-		return nil, err
+		l.Fatal(err)
 	}
 	defer file.Close()
 	decoder := json.NewDecoder(file)
-	Config := Configuration{}
-	err = decoder.Decode(&Config)
+	c := Configuration{}
+	err = decoder.Decode(&c)
 	if err != nil {
-		return nil, err
+		l.Fatal(fmt.Sprintf("Can't decode config (%v)", err))
 	}
 
-	return &Config, nil
+	return c
 }
 
-func Write() error {
-	fpath, err := os.Getwd()
+func Print() {
+	json, err := json.MarshalIndent(Configuration{Db: DbConfig{Schema: "public"}}, "", "\t")
 	if err != nil {
-		return err
+		l.Fatal("Can't print Config")
 	}
-	fpath = path.Join(fpath, "timescaleproxy.conf.sample")
-	file, err := json.MarshalIndent(Configuration{Db: DbConfig{Schema: "public"}}, "", "\t")
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(fpath, file, 0600)
-	log.Print("Created sample file", fpath)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	fmt.Println(string(json))
 }

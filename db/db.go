@@ -25,18 +25,19 @@ func NewPgdb(conf config.DbConfig) *Pgdb {
 	if err != nil {
 		l.Fatal("Cannot parse config", err)
 	}
-	poolconf.MinConns = conf.MinConns
-	poolconf.MaxConns = conf.MaxConns
-	poolconf.ConnConfig.Host = conf.Host
-	if conf.Port == 0 {
-		conf.Port = 5432
+	if conf.MinConns != 0 {
+		poolconf.MinConns = conf.MinConns
 	}
-	poolconf.ConnConfig.Port = conf.Port
+	if conf.MaxConns != 0 {
+		poolconf.MaxConns = conf.MaxConns
+	}
+	poolconf.ConnConfig.Host = conf.Host
+	if conf.Port != 0 {
+		poolconf.ConnConfig.Port = conf.Port
+	}
 	poolconf.ConnConfig.Database = conf.Database
 	poolconf.ConnConfig.User = conf.User
 	poolconf.ConnConfig.Password = conf.Password
-
-	log.Print(*poolconf)
 
 	log.Info(fmt.Sprintf("Connecting to Postgresql (%v:%v)", conf.Host, conf.Port))
 	c, err := pgxpool.ConnectConfig(context.Background(), poolconf)

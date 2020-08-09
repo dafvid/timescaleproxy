@@ -2,13 +2,16 @@ package log
 
 import (
 	l "log"
+
+	"github.com/dafvid/timescaleproxy/util"
 )
 
 var Off int = 0
-var InfoLevel int = 1
-var DebugLevel int = 2
+var ErrorLevel int = 1
+var InfoLevel int = 2
+var DebugLevel int = 3
 
-var Loglevel int = InfoLevel
+var Loglevel int = ErrorLevel
 
 func Print(v ...interface{}) {
 	Info(v...)
@@ -16,12 +19,21 @@ func Print(v ...interface{}) {
 
 func Info(v ...interface{}) {
 	if Loglevel >= InfoLevel {
-		l.Print("INFO: ", v)
+		v := util.Prepend("INFO: ", v)
+		l.Print(v...)
 	}
 }
 
 func Debug(v ...interface{}) {
 	if Loglevel >= DebugLevel {
-		l.Print("DEBUG: ", v)
+		v := util.Prepend("DEBUG: ", v)
+		l.Print(v...)
+	}
+}
+
+func Error(v ...interface{}) {
+	if Loglevel >= DebugLevel {
+		v := util.Prepend("DEBUG: ", v)
+		l.Print(v...)
 	}
 }

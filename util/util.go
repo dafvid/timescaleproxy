@@ -12,12 +12,6 @@ func InArr(str string, arr []string) bool {
 	return false
 }
 
-// find string in keys of map
-//func InMap(str string, m map[string]interface{}) bool {
-//	for k := range m {
-//		if str == k {
-//			return true
-//		}
-//	}
-//	return false
-//}
+func Prepend(i interface{}, arr []interface{}) []interface{} {
+	return append([]interface{}{i}, arr...)
+}

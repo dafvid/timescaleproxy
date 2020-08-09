@@ -39,7 +39,7 @@ func main() {
 
 	showHelp := flag.Bool("h", false, "Show usage")
 	confPath := flag.String("c", "", "Path to config file")
-	writeConf := flag.Bool("writeconf", false, "Creates an empty sample conf file")
+	printConf := flag.Bool("printconf", false, "Prints empty sample conf to stdout")
 
 	flag.Parse()
 
@@ -47,18 +47,11 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	if *writeConf {
-		err := config.Write()
-		if err != nil {
-			fmt.Println(err)
-		}
+	if *printConf {
+		config.Print()
 		return
 	}
-	conf, err := config.Read(*confPath)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	conf := config.Read(*confPath)
 	tp := db.NewPgdb(conf.Db)
 	if tp == nil {
 		l.Fatal("Cannot connect to database")
