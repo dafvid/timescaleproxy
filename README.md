@@ -28,12 +28,12 @@ Functionality as of 2020-07-31:
 # TODO
 - ~~config~~
 - ~~create tables from first measurement~~
-- update table if measurement changes (unlikely)
 - ~~write measurement to db~~
 - ~~tags as FK~~
 - ~~schema config~~
 - handle influx line protocol (less portable maybe)
 - measurement config (column type for field)
 - sanitize strings
-- default retention policy
-- error handling
+- ~~default retention policy~~
+- ~~error handling~~
+- update table if measurement changes (unlikely)
