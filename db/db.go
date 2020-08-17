@@ -16,61 +16,74 @@ type Pgdb struct {
 	c           *pgxpool.Pool
 	knownTables map[string]Tables
 	schema      string
+	config      config.Configuration
 }
 
-func NewPgdb(conf config.DbConfig) *Pgdb {
-	p := Pgdb{}
+func NewPgdb(conf config.Configuration) *Pgdb {
+	p := Pgdb{
+		config: conf,
+	}
 
 	poolconf, err := pgxpool.ParseConfig("")
 	if err != nil {
-		l.Fatal("Cannot parse config", err)
+		l.Fatal("Cannot parse pool config", err)
 	}
-	if conf.MinConns != 0 {
-		poolconf.MinConns = conf.MinConns
+	if conf.Db.MinConns != 0 {
+		poolconf.MinConns = conf.Db.MinConns
 	}
-	if conf.MaxConns != 0 {
-		poolconf.MaxConns = conf.MaxConns
+	if conf.Db.MaxConns != 0 {
+		poolconf.MaxConns = conf.Db.MaxConns
 	}
-	poolconf.ConnConfig.Host = conf.Host
-	if conf.Port != 0 {
-		poolconf.ConnConfig.Port = conf.Port
+	poolconf.ConnConfig.Host = conf.Db.Host
+	if conf.Db.Port != 0 {
+		poolconf.ConnConfig.Port = conf.Db.Port
 	}
-	poolconf.ConnConfig.Database = conf.Database
-	poolconf.ConnConfig.User = conf.User
-	poolconf.ConnConfig.Password = conf.Password
+	poolconf.ConnConfig.Database = conf.Db.Database
+	poolconf.ConnConfig.User = conf.Db.User
+	poolconf.ConnConfig.Password = conf.Db.Password
 
-	log.Info(fmt.Sprintf("Connecting to Postgresql (%v:%v)", conf.Host, conf.Port))
+	log.Info(fmt.Sprintf("Connecting to Postgresql (%v:%v) as %v", conf.Db.Host, conf.Db.Port, conf.Db.User))
 	c, err := pgxpool.ConnectConfig(context.Background(), poolconf)
 	if err != nil {
-		log.Print("db.connect() ", err)
+		log.Error("db.connect() ", err)
 		return nil
 	}
 	p.c = c
 	p.knownTables = make(map[string]Tables)
-	p.schema = conf.Schema
+	p.schema = conf.Db.Schema
 	return &p
 }
 
 func (p *Pgdb) checkTables(ctx context.Context, m metric.Metric) bool {
-	//fmt.Println("db.checkTable")
 	name := m.Name
-	//fmt.Println("Name", name)
+	tagsName := name + "_tags"
 	_, ok := p.knownTables[name]
 	if !ok {
-		//m.Print()
-		var t *Tables
+		t := Tables{}
 
-		if p.exists(ctx, name) {
-			t = p.reflectTables(ctx, name)
+		var tt *Table
+		if p.tableExists(ctx, tagsName) {
+			tt = p.reflectTable(ctx, tagsName)
 		} else {
-			t = p.createTables(ctx, m)
+			tt = p.createTagsTable(ctx, m)
 		}
-
-		if t == nil {
+		if tt == nil {
 			return false
 		}
+		t.TagsTable = *tt
 
-		p.knownTables[name] = *t
+		var dt *Table
+		if p.tableExists(ctx, name) {
+			dt = p.reflectTable(ctx, name)
+		} else {
+			dt = p.createDataTable(ctx, m)
+		}
+		if dt == nil {
+			return false
+		}
+		t.DataTable = *dt
+
+		p.knownTables[name] = t
 	}
 
 	return true
@@ -80,7 +93,6 @@ func (p *Pgdb) Write(ctx context.Context, m metric.Metric) bool {
 	//fmt.Println("db.Write()")
 	ok := p.checkTables(ctx, m)
 	if !ok {
-		//log.Printf("Can't create table for metric '%v'", m.Name)
 		return false
 	} else {
 		return p.write(ctx, m)
