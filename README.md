@@ -6,7 +6,7 @@ I saw the need for a workaround using a HTTP-proxy that recieves metrics in JSON
 
 I'm looking at the [plugin](https://github.com/svenklemm/telegraf/tree/postgres/plugins/outputs/postgresql) but instead of a general PostgreSQL output it outputs only to TimescaleDB.
 
-Security is non-existant at the moment so this should only be used far away from the internetz. 
+Security is non-existant at the moment so this should only be used far away from the internetz. I'd recommend either behind a secured nginx reverse proxy or over a [wireguard](https://www.wireguard.com) interface.
 
 Telegraf config
 ```yaml
