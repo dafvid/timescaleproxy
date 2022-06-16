@@ -25,12 +25,14 @@ type DbConfig struct {
 	MinConns int32
 }
 
+type ListenConfig struct {
+	Address	string
+	Port 	string
+}
+
 type Configuration struct {
 	Db     DbConfig
-	Listen struct {
-		Address string
-		Port    string
-	}
+	Listen	ListenConfig
 	TimestampUnit     string
 	Duration          time.Duration
 	DefaultDropPolicy string
@@ -103,7 +105,11 @@ func Read(cpath string) Configuration {
 }
 
 func Print() {
-	json, err := json.MarshalIndent(Configuration{Db: DbConfig{Schema: "public"}}, "", "\t")
+	json, err := json.MarshalIndent(
+		Configuration{
+			Db: DbConfig{Schema: "public", Host: "localhost", Port: 5432}, 
+			Listen: ListenConfig{Address: "localhost", Port: "8432"},
+			TimestampUnit: "1ms"}, "", "\t")
 	if err != nil {
 		l.Fatal("Can't print Config")
 	}
