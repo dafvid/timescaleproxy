@@ -3,3 +3,5 @@
 *.sample
 *.swp
 .editorconfig
+config.json
+timescaleproxy
