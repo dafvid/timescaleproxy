@@ -8,7 +8,26 @@ I'm looking at the [plugin](https://github.com/svenklemm/telegraf/tree/postgres/
 
 Security is non-existant at the moment so this should only be used far away from the internetz. I'd recommend either behind a secured nginx reverse proxy or over a [wireguard](https://www.wireguard.com) interface.
 
-Telegraf config
+## Install
+  ```sh
+  git clone https://github.com/dafvid/timescaleproxy.git
+  cd timescaleproxy
+  go install
+  ```
+
+## Config
+  ```sh
+  ./timescaleproxy -printconf > config.json
+  ```
+  Put timescale info under Db and proxy info under Listen
+  
+## Run
+  ```sh
+  ./timescaleproxy -c config.json
+  ```
+  
+
+## Telegraf config
 ```yaml
 [[outputs.http]]
   url = "http://url.to.server:aport/"
