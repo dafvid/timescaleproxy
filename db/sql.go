@@ -153,6 +153,7 @@ func (p Pgdb) writeData(ctx context.Context, m metric.Metric, t Table, tagId int
 	for i, c := range t.Columns {
 		names[i] = fmt.Sprintf("\"%v\"", c.Name)
 		if c.Name == "time" {
+			//Convert to timestamp string to get sub second timings
 			t := time.Unix(0, p.config.Duration.Nanoseconds()*m.Timestamp).UTC()
 			values[i] = t
 		} else if c.Name == "tag_id" {
