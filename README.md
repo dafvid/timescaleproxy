@@ -4,7 +4,7 @@ A proxy for writing Telegraf JSON HTTP outputs into a TimescaleDB. Written in Go
 As the Telegraf plugin for TimescaleDB is ~[pending](https://github.com/influxdata/telegraf/pull/3428)~ [pending](https://github.com/influxdata/telegraf/pull/8651) for being included in the Telegraf codebase. 
 I saw the need for a workaround using a HTTP-proxy that recieves metrics in JSON and writes them to the TimescaleDB.
 
-I'm looking at the [plugin](https://github.com/svenklemm/telegraf/tree/postgres/plugins/outputs/postgresql) but instead of a general PostgreSQL output it outputs only to TimescaleDB.
+It's inspired by the [plugin](https://github.com/svenklemm/telegraf/tree/postgres/plugins/outputs/postgresql) but instead of a general PostgreSQL output it outputs only to TimescaleDB.
 
 Security is non-existant at the moment so this should only be used far away from the internetz. I'd recommend either behind a secured nginx reverse proxy or over a [wireguard](https://www.wireguard.com) interface.
 
@@ -13,6 +13,7 @@ Security is non-existant at the moment so this should only be used far away from
   git clone https://github.com/dafvid/timescaleproxy.git
   cd timescaleproxy
   go install
+  go build
   ```
 
 ## Config
@@ -36,7 +37,10 @@ Security is non-existant at the moment so this should only be used far away from
     Content-Type = "application/json; charset=utf-8"
 ```
 
-Functionality as of 2020-07-31:
+## Updates
+### 2022-06-21
+- Changed the timestamp column name to ts
+### 2020-07-31:
 - Export and read JSON-config
 - Create tables and tags in DB from first Metric
 - Writes JSON-metrics to TimescaleDB
