@@ -50,7 +50,7 @@ func (p Pgdb) makeDataTable(m metric.Metric) Table {
 		Name:   m.Name,
 		Schema: p.schema,
 		Columns: []Column{
-			{Name: "time", Type: "timestamp"},
+			{Name: "ts", Type: "timestamp"},
 			{Name: "tag_id", Type: "integer REFERENCES " + m.Name + "_tags (id)"},
 		},
 	}
@@ -83,7 +83,7 @@ func (t Table) columnDefs() string {
 
 func (p *Pgdb) createDataTable(ctx context.Context, m metric.Metric) *Table {
 	t := p.makeDataTable(m)
-	qt := "CREATE TABLE %v(%v); SELECT create_hypertable('%v','time',chunk_time_interval := '1 week'::interval,if_not_exists := true);"
+	qt := "CREATE TABLE %v(%v); SELECT create_hypertable('%v','ts',chunk_time_interval := '1 week'::interval,if_not_exists := true);"
 	q := fmt.Sprintf(qt, t.Name, t.columnDefs(), t.FullName())
 	if p.config.DefaultDropPolicy != "" {
 		q += fmt.Sprintf(" SELECT add_drop_chunks_policy('%v', INTERVAL '%v');", t.FullName(), p.config.DefaultDropPolicy)
