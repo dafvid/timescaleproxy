@@ -38,7 +38,7 @@ Security is non-existant at the moment so this should only be used far away from
 ```
 
 ## Updates
-### 2022-06-21
+### 2022-06-22
 - Changed the timestamp column name to ts
 ### 2020-07-31:
 - Export and read JSON-config
