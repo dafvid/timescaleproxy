@@ -45,10 +45,8 @@ Security is non-existant at the moment so this should only be used far away from
 - Create tables and tags in DB from first Metric
 - Writes JSON-metrics to TimescaleDB
 
-
-
-
 # TODO
+- Per measurement config for retention
 - ~~config~~
 - ~~create tables from first measurement~~
 - ~~write measurement to db~~
