@@ -1,0 +1,38 @@
+#!/bin/sh
+
+# PROVIDE: timescaleproxy
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+#
+# Add the following lines to /etc/rc.conf to enable timescaleproxy:
+#
+# timescaleproxy_enable (bool):	Set it to "YES" to enable timescaleproxy
+#				Default is "NO".
+# timescaleproxy_configfile (path):	Set the path to the config file
+#				Default is /usr/local/timescaleproxy/config.json.
+# timescaleproxy_logfile (path):		Set the path to the timescaleproxy log file
+#				Default is /var/log/timescaleproxy.log.
+# timescaleproxy_pidfile (path):		Set the path to the timescaleproxy pid file
+#				Default is /var/run/timescaleproxy.pid.
+# timescaleproxy_uid (int):		Set the UID of the process to run with
+#				Default is timescaleproxy.
+
+. /etc/rc.subr
+
+name="timescaleproxy"
+rcvar=timescaleproxy_enable
+
+load_rc_config $name
+
+: ${timescaleproxy_enable="NO"}
+: ${timescaleproxy_configfile="/usr/local/timescaleproxy/config.json"}
+: ${timescaleproxy_logfile="/var/log/${name}.log"}
+: ${timescaleproxy_pidfile="/var/run/${name}.pid"}
+: ${timescaleproxy_uid="tsproxy"}
+
+command="/usr/sbin/daemon"
+command_args="-o ${timescaleproxy_logfile} -P ${timescaleproxy_pidfile} -r /usr/local/timescaleproxy/timescaleproxy -c ${timescaleproxy_configfile}"
+echo ${command_args}
+pidfile=${timescaleproxy_pidfile}
+
+run_rc_command "$1"
