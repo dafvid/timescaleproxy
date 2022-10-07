@@ -20,7 +20,6 @@ Security is non-existant at the moment so this should only be used far away from
   ```sh
   ./timescaleproxy -printconf > config.json
   ```
-  Put timescale info under Db and proxy info under Listen
   
   ### Db ###
   - **Db.Host**: PostgreSQL server host
