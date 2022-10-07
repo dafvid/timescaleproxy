@@ -31,7 +31,7 @@ Security is non-existant at the moment so this should only be used far away from
 ## Telegraf config
 ```yaml
 [[outputs.http]]
-  url = "http://url.to.server:aport/"
+  url = "http://url.to.server:8432/"
   data_format = "json"
   [outputs.http.headers]
     Content-Type = "application/json; charset=utf-8"
