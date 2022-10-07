@@ -32,7 +32,7 @@ load_rc_config $name
 
 command="/usr/sbin/daemon"
 command_args="-o ${timescaleproxy_logfile} -P ${timescaleproxy_pidfile} -r /usr/local/timescaleproxy/timescaleproxy -c ${timescaleproxy_configfile}"
-echo ${command_args}
+
 pidfile=${timescaleproxy_pidfile}
 
 run_rc_command "$1"
