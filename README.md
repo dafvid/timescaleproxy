@@ -22,6 +22,23 @@ Security is non-existant at the moment so this should only be used far away from
   ```
   Put timescale info under Db and proxy info under Listen
   
+  ### Db ###
+  - **Db.Host**: PostgreSQL server host
+  - **Db.Port**: PostgreSQL port
+  - **Db.Schema**: Timescale database schema
+  - **Db.Database**: Timescale database name
+  - **Db.User**: Timescale database user
+  - **Db.Password**: Timescale database user password
+  - **Db.MaxConns**: MaxConns setting for pgxpool
+  - **Db.MinConns**: MinConns setting for pgxpool
+  ### Listen ###
+  - **Listen.adress**: Timescale proxy listening adress
+  - **Listen.port**: Timescale proxy listening port
+  ### Misc ###
+  - **TimestampUnit**: matches the setting `json_timestamp_units` in section `[[outputs.http]]` in `telegraf.conf`
+  - **DefaultDropPolicy**: Interval setting for [add_retention_policy()](https://docs.timescale.com/api/latest/data-retention/add_retention_policy/). Clear to disable retention.
+  - **LogLevel**: Log level. Clear to disable logs.
+    
 ## Run
   ```sh
   ./timescaleproxy -c config.json
