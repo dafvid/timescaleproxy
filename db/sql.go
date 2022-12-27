@@ -86,7 +86,7 @@ func (p *Pgdb) createDataTable(ctx context.Context, m metric.Metric) *Table {
 	qt := "CREATE TABLE %v(%v); SELECT create_hypertable('%v','ts',chunk_time_interval := '1 week'::interval,if_not_exists := true);"
 	q := fmt.Sprintf(qt, t.Name, t.columnDefs(), t.FullName())
 	if p.config.DefaultDropPolicy != "" {
-		q += fmt.Sprintf(" SELECT add_drop_chunks_policy('%v', INTERVAL '%v');", t.FullName(), p.config.DefaultDropPolicy)
+		q += fmt.Sprintf(" SELECT add_retention_policy('%v', INTERVAL '%v');", t.FullName(), p.config.DefaultDropPolicy)
 	}
 	_, err := p.c.Exec(ctx, q)
 	if err != nil {

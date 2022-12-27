@@ -19,7 +19,6 @@ var p db.Pgdb
 
 func index(w http.ResponseWriter, r *http.Request) {
 	t := time.Now()
-	//fmt.Println("\nindex()")
 	ct := r.Header.Get("content-type")
 	if r.Body == http.NoBody || ct == "" {
 		fmt.Fprintln(w,
@@ -29,7 +28,6 @@ func index(w http.ResponseWriter, r *http.Request) {
 		if len(cta) > 1 {
 			ct = cta[0]
 		}
-		//log.Debug("Content-type: ", ct)
 		switch ct {
 		case "application/json":
 			metrics, err := metric.Parse(r.Body)

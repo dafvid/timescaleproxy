@@ -34,7 +34,7 @@ type Configuration struct {
 	Db     DbConfig
 	Listen	ListenConfig
 	TimestampUnit     string
-	Duration          time.Duration
+    Duration          time.Duration `json:"-"`
 	DefaultDropPolicy string
 	LogLevel          string
 }
@@ -107,6 +107,7 @@ func Read(cpath string) Configuration {
 func Print() {
 	json, err := json.MarshalIndent(
 		Configuration{
+            LogLevel: "info",
 			Db: DbConfig{Schema: "public", Host: "localhost", Port: 5432}, 
 			Listen: ListenConfig{Address: "localhost", Port: "8432"},
 			TimestampUnit: "1ms"}, "", "\t")
